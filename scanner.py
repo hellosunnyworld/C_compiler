@@ -198,7 +198,7 @@ class xFA:
                         return token
 
 
-def proc_seg(w):
+def proc_seg(dfa, w, tokens):
         w_len = 1
         token = dfa.scan(w)
         #print("----------------")
@@ -211,23 +211,26 @@ def proc_seg(w):
                 print("Token: ERROR")
                 return
         else:
-                print("Token:", token)   
+                #print("Token:", token)   
+                tokens.append(token)
         
         if w_len == 1:
                 return
-        proc_seg(w[(len(w) - w_len + 1):])
+        proc_seg(dfa, w[(len(w) - w_len + 1):], tokens)
 
-if __name__ == "__main__":
+def run(f):
+        tokens = []
         dfa = xFA()
         dfa.construct_nfa()
         dfa.nfa_to_dfa()
-        with open(sys.argv[1]) as f:
+        with open(f) as f:
         #with open("/home/sunnylin/csc4180_compiler/A2/TestCases/test1.c1") as f:
                 lines = f.readlines()
                 for line in lines:
                         ws = line.split()
                         for w in ws:
-                                proc_seg(w)
+                                proc_seg(dfa, w, tokens)
+        return tokens
                                 
                                 
 
