@@ -46,7 +46,7 @@ class cfg:
                 if item.rhs[0] != X:
                     self.first(item.rhs[0], fx)
                 try:
-                    nullable = item.rhs.index('VDS', 0, -1)
+                    nullable = item.rhs.index('var_declarations', 0, -1)
                 except:
                     nullable = 0
                 else:
@@ -69,198 +69,201 @@ class cfg:
 
         # P -> VDS STS (EOF)
         # program -> var_declaration statements
-        self.init_rule('P',['VDS','STS'])      
+        self.init_rule('P',['var_declarations','statements'])      
         self.rule_dict['P'][-1].lookahead.append("EOF")
+
+        #self.init_rule('P',['statements'])      
 
         # VDS -> VDS VD 
         # VDS -> VD
-        self.init_rule('VDS',['VDS','VD'])     
-        self.init_rule('VDS',['VD']) 
+        self.init_rule('var_declarations',['var_declarations','var_declaration'])     
+        self.init_rule('var_declarations',['sigma']) 
+        #self.init_rule('var_declarations',['var_declaration']) 
 
         # VD -> INT DLS SEMI
         # var_declaration -> INT declaration_list SEMI
-        self.init_rule('VD',['INT','DLS','SEMI'])         
+        self.init_rule('var_declaration',['INT','declaration_list','SEMI'])         
 
         # declaration_list -> dls COMMA decla | decla
-        self.init_rule('DLS',['DLS','COMMA','D'])     
-        self.init_rule('DLS',['D'])      
+        self.init_rule('declaration_list',['declaration_list','COMMA','declaration'])     
+        self.init_rule('declaration_list',['declaration'])      
 
         # decla -> ID ASSIGN INT_NUM | ID[INT_NUM] | ID
-        self.init_rule('D',['ID', 'ASSIGN', 'INT_NUM'])
-        # self.init_rule('D', ['ID', 'LSQUARE', 'INT_NUM', 'RSQUARE'])
-        self.init_rule('D', ['ID'])
+        self.init_rule('declaration',['ID', 'ASSIGN', 'INT_NUM'])
+        self.init_rule('declaration', ['ID', 'LSQUARE', 'INT_NUM', 'RSQUARE'])
+        self.init_rule('declaration', ['ID'])
 
         # code_block -> stat | {stats}          
-        # self.init_rule('CB', ['ST'])
-        # self.init_rule('CB', ['LBRACE', 'STS', 'RBRACE'])
+        self.init_rule('code_block', ['statement'])
+        self.init_rule('code_block', ['LBRACE', 'statements', 'RBRACE'])
 
         # stats -> stats stat | stat
-        self.init_rule('STS', ['STS', 'ST'])
-        self.init_rule('STS', ['ST'])
+        self.init_rule('statements', ['statements', 'statement'])
+        self.init_rule('statements', ['statement'])
 
         # stat -> assign_stat; | ctrl_stat | rw_stat; | ;
-        self.init_rule('ST', ['AST', 'SEMI'])
-        self.init_rule('ST', ['CST'])
-        # self.init_rule('ST', ['RWST', 'SEMI'])
-        self.init_rule('ST', ['SEMI'])
+        self.init_rule('statement', ['assign_statement', 'SEMI'])
+        self.init_rule('statement', ['control_statement'])
+        self.init_rule('statement', ['read_write_statement', 'SEMI'])
+        self.init_rule('statement', ['SEMI'])
 
         # ctrl_stat -> if_stat | while_stat | do_while_stat; | RETURN;
-        # self.init_rule('CST', ['IFST'])
-        # self.init_rule('CST', ['WHST'])
-        # self.init_rule('CST', ['DWST', 'SEMI'])
-        self.init_rule('CST', ['RETURN', 'SEMI']) 
+        self.init_rule('control_statement', ['if_statement'])
+        self.init_rule('control_statement', ['while_statement'])
+        self.init_rule('control_statement', ['do_while_statement', 'SEMI'])
+        self.init_rule('control_statement', ['RETURN', 'SEMI']) 
 
         # rw_stat -> r_stat | w_stat
-        # self.init_rule('RWST', ['RST'])
-        # self.init_rule('RWST', ['WST'])
+        self.init_rule('read_write_statement', ['read_statement'])
+        self.init_rule('read_write_statement', ['write_statement'])
 
-        # # assign_stat -> ID[exp] := exp | ID := exp
-        # self.init_rule('AST', ['ID', 'LSQUARE', 'E', 'RSQUARE', 'ASSIGN', 'E'])
-        self.init_rule('AST', ['ID', 'ASSIGN', 'E'])
+        # assign_stat -> ID[exp] := exp | ID := exp
+        self.init_rule('assign_statement', ['ID', 'LSQUARE', 'exp', 'RSQUARE', 'ASSIGN', 'exp'])
+        self.init_rule('assign_statement', ['ID', 'ASSIGN', 'exp'])
 
         # if_stat -> if_stmt | if_stmt ELSE code_block
-        # self.init_rule('IFST', ['IFSTMT']) 
-        # self.init_rule('IFST', ['IFSTMT', 'ELSE', 'CB'])
+        self.init_rule('if_statement', ['if_stmt']) 
+        self.init_rule('if_statement', ['if_stmt', 'ELSE', 'code_block'])
 
-        # # if_stmt -> if (exp) code_block
-        # self.init_rule('IFSTMT', ['IF', 'LPAR', 'E', 'RPAR', 'CB'])
+        # if_stmt -> if (exp) code_block
+        self.init_rule('if_stmt', ['IF', 'LPAR', 'exp', 'RPAR', 'code_block'])
 
-        # # while_stat -> WHILE (exp) code_block
-        # self.init_rule('WHST', ['WHILE', 'LPAR', 'E', 'RPAR', 'CB'])
+        # while_stat -> WHILE (exp) code_block
+        self.init_rule('while_statement', ['WHILE', 'LPAR', 'exp', 'RPAR', 'code_block'])
 
-        # # do_while_stat -> DO code_block WHILE (exp)
-        # self.init_rule('DWST', ['DO', 'CB', 'WHILE', 'LPAR', 'E', 'RPAR']) 
+        # do_while_stat -> DO code_block WHILE (exp)
+        self.init_rule('do_while_statement', ['DO', 'code_block', 'WHILE', 'LPAR', 'exp', 'RPAR']) 
 
-        # # r_stat -> READ(ID)
-        # self.init_rule('RST', ['READ', 'LPAR', 'ID', 'RPAR'])
+        # r_stat -> READ(ID)
+        self.init_rule('read_statement', ['READ', 'LPAR', 'ID', 'RPAR'])
 
-        # # w_stat -> write(exp)
-        # self.init_rule('WST', ['WRITE', 'LPAR', 'E', 'RPAR'])
+        # w_stat -> write(exp)
+        self.init_rule('write_statement', ['WRITE', 'LPAR', 'exp', 'RPAR'])
 
         # exp -> 
-        self.init_rule('E', ['INT_NUM'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['INT_NUM'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['ID'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['ID'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        # self.init_rule('E', ['ID', 'LSQUARE', 'E', 'RSQUARE'])
-        # self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
-        #                                  "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
-        #                                  'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
-
-        self.init_rule('E', ['NOT_OP', 'E']) # ! has the highest priority
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['ID', 'LSQUARE', 'exp', 'RSQUARE'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', 'AND_OP', 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'ANDAND', 'OROR', 'OR_OP', 'AND_OP']
+        self.init_rule('exp', ['NOT_OP', 'exp']) # ! has the highest priority
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+                                         "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
+                                         'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "OR_OP", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'ANDAND', 'OROR', 'OR_OP']
+        self.init_rule('exp', ['exp', 'AND_OP', 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'ANDAND', 'OROR', 'OR_OP', 'AND_OP']
 
-        self.init_rule('E', ['E', "PLUS", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['exp', "OR_OP", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'ANDAND', 'OROR', 'OR_OP']
+
+        self.init_rule('exp', ['exp', "PLUS", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "MINUS", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['exp', "MINUS", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "MUL_OP", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['exp', "MUL_OP", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "DIV_OP", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['exp', "DIV_OP", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "LT", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
+        self.init_rule('exp', ['exp', "LT", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
                                          'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "GT", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
+        self.init_rule('exp', ['exp', "GT", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
                                          'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "EQ", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
+        self.init_rule('exp', ['exp', "EQ", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
                                          'NOTEQ', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "NOTEQ", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
+        self.init_rule('exp', ['exp', "NOTEQ", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
                                          'NOTEQ', 'ANDAND', 'OROR']
         
-        self.init_rule('E', ['E', "LTEQ", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
+        self.init_rule('exp', ['exp', "LTEQ", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "GTEQ", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
+        self.init_rule('exp', ['exp', "GTEQ", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "SHL_OP", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
+        self.init_rule('exp', ['exp', "SHL_OP", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
                                          'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "SHR_OP", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
+        self.init_rule('exp', ['exp', "SHR_OP", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', 'AND_OP',
                                          'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "ANDAND", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'ANDAND', 'OROR']
+        self.init_rule('exp', ['exp', "ANDAND", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ['E', "OROR", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OROR']
+        self.init_rule('exp', ['exp', "OROR", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OROR']
 
-        self.init_rule('E', ['LPAR', 'E', 'RPAR'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ['LPAR', 'exp', 'RPAR'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.init_rule('E', ["MINUS", 'E'])
-        self.rule_dict['E'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+        self.init_rule('exp', ["MINUS", 'exp'])
+        self.rule_dict['exp'][-1].lookahead = ['RSQUARE', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
                                          "MINUS", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
         self.first('S', self.rule_dict['S'][0].first)
         self.first('P', self.rule_dict['P'][0].first)
-        self.first('VDS', self.rule_dict['VDS'][0].first)
-        self.first('VD', self.rule_dict['VD'][0].first)
-        self.first('DLS', self.rule_dict['DLS'][0].first)
-        self.first('D', self.rule_dict['D'][0].first)
-        #self.first('CB', self.rule_dict['CB'][0].first)
-        self.first('STS', self.rule_dict['STS'][0].first)
-        self.first('ST', self.rule_dict['ST'][0].first)
-        self.first('CST', self.rule_dict['CST'][0].first)
-        #self.first('RWST', self.rule_dict['RWST'][0].first)
-        self.first('AST', self.rule_dict['AST'][0].first)
-        # self.first('IFST', self.rule_dict['IFST'][0].first)
-        # self.first('IFSTMT', self.rule_dict['IFSTMT'][0].first)
-        # self.first('WHST', self.rule_dict['WHST'][0].first)
-        # self.first('DWST', self.rule_dict['DWST'][0].first)
-        # self.first('RST', self.rule_dict['RST'][0].first)
-        # self.first('WST', self.rule_dict['WST'][0].first)
-        self.first('E', self.rule_dict['E'][0].first)
+        self.first('var_declarations', self.rule_dict['var_declarations'][0].first)
+        self.first('var_declaration', self.rule_dict['var_declaration'][0].first)
+        self.first('declaration_list', self.rule_dict['declaration_list'][0].first)
+        self.first('declaration', self.rule_dict['declaration'][0].first)
+        self.first('code_block', self.rule_dict['code_block'][0].first)
+        self.first('statements', self.rule_dict['statements'][0].first)
+        self.first('statement', self.rule_dict['statement'][0].first)
+        self.first('control_statement', self.rule_dict['control_statement'][0].first)
+        self.first('read_write_statement', self.rule_dict['read_write_statement'][0].first)
+        self.first('assign_statement', self.rule_dict['assign_statement'][0].first)
+        self.first('if_statement', self.rule_dict['if_statement'][0].first)
+        self.first('if_stmt', self.rule_dict['if_stmt'][0].first)
+        self.first('while_statement', self.rule_dict['while_statement'][0].first)
+        self.first('do_while_statement', self.rule_dict['do_while_statement'][0].first)
+        self.first('read_statement', self.rule_dict['read_statement'][0].first)
+        self.first('write_statement', self.rule_dict['write_statement'][0].first)
+        self.first('exp', self.rule_dict['exp'][0].first)
 
         # init lookaheads
         for i in self.rule_dict.values():
             for item in i:
                 for ri in range(len(item.rhs) - 1):
-                    if item.rhs[ri] != 'P' and item.rhs[ri] != 'E' and item.rhs[ri] != 'S' and self.rule_dict.get(item.rhs[ri]) != None:
+                    if item.rhs[ri] != 'P' and item.rhs[ri] != 'exp' and item.rhs[ri] != 'S' and self.rule_dict.get(item.rhs[ri]) != None:
                         if self.rule_dict.get(item.rhs[ri + 1]) != None:
                             for i in self.rule_dict[item.rhs[ri + 1]][0].first:
                                 if i not in self.rule_dict[item.rhs[ri]][0].lookahead:
@@ -270,7 +273,7 @@ class cfg:
                             self.rule_dict[item.rhs[ri]][0].lookahead.append(item.rhs[ri + 1])
         for i in self.rule_dict.values():
             for item in i:
-                if item.rhs[-1] != 'E' and self.rule_dict.get(item.rhs[-1]) != None:
+                if item.rhs[-1] != 'exp' and self.rule_dict.get(item.rhs[-1]) != None:
                     for c in self.rule_dict[item.lhs][0].lookahead:
                         if c not in self.rule_dict[item.rhs[-1]][0].lookahead:
                             self.rule_dict[item.rhs[-1]][0].lookahead.append(c)
@@ -288,8 +291,13 @@ class LR1:
 
     def closure(self, crt_s):
         old_s = []
-        while old_s != crt_s:
-            old_s = copy.deepcopy(crt_s)
+        check = 0
+        change = 1 # bool
+        #while old_s != crt_s:
+        while change:
+            #print('c', check)
+            #old_s = copy.deepcopy(crt_s)
+            change = 0
             for it in crt_s:
                 if it.dot_pos < len(it.rhs) and self.cfg.rule_dict.get(it.rhs[it.dot_pos]) != None: # it: A -> a.X
                     for p in self.cfg.rule_dict[it.rhs[it.dot_pos]]:
@@ -307,6 +315,8 @@ class LR1:
                         #     crt_s.append()
                         if p not in crt_s:
                             crt_s.append(copy.deepcopy(p))
+                            change = 1
+            check += 1
         return crt_s
     
     def goto(self, crt_s, X):
@@ -327,18 +337,22 @@ class LR1:
         old_states = []
         old_map = []
 
+        changed_map = 1
+        changed_states = 1 # two bool
         count = 0
-        while old_states != self.states or old_map != self.mapE:
-            print(count)
-            old_states = copy.deepcopy(self.states)
-            old_map = copy.deepcopy(self.mapE)
-
+        #while old_states != self.states or old_map != self.mapE:
+        while changed_map or changed_states:
+            #print(count)
+            #old_states = copy.deepcopy(self.states)
+            #old_map = copy.deepcopy(self.mapE)
+            changed_states = 0
+            changed_map = 0
             for si in range(len(self.states)):
                 for it in self.states[si]:
                     # A -> aX.
                     # add r into table
                     if it.dot_pos == len(it.rhs):
-                        if it.lhs != 'E':
+                        if it.lhs != 'exp':
                             for z in self.cfg.rule_dict[it.lhs][0].lookahead:
                                 self.table[si][z] = 'r' + str(it.no)
                         else:
@@ -357,11 +371,15 @@ class LR1:
                         # if a new state
                         if state_j == -1:
                             self.states.append(J)
+                            changed_states = 1
                             self.mapE.append({})
+                            changed_map = 1
                             self.table.append({})
                             state_j = len(self.states) - 1
                         # update map
-                        self.mapE[si][X] = state_j
+                        if self.mapE[si].get(X) == None or self.mapE[si][X] != state_j:
+                            self.mapE[si][X] = state_j
+                            changed_map = 1
                         # update table
                         if self.cfg.rule_dict.get(X) == None:
                             self.table[si][X] = 's' + str(state_j)
@@ -375,7 +393,14 @@ def parse(t, stack, crt_s):
     print('state:',crt_s, end='	')
     print('next type:', t, end='		')
 
-    act = p.table[crt_s][t]
+    if p.table[crt_s].get(t) != None:
+        act = p.table[crt_s][t]
+    else:
+        while (p.table[crt_s].get(t) == None):
+            act = p.table[crt_s]['sigma']
+            stack.append([crt_s,t])
+            crt_s = int(act[1:])
+        act = p.table[crt_s][t]
     if act[0] == 's':
         stack.append([crt_s,t])
         crt_s = int(act[1:])
@@ -384,7 +409,10 @@ def parse(t, stack, crt_s):
     elif act[0] == 'r':
         rule = g.rules[int(act[1:])]
         for i in rule.rhs:
-            last_t = stack.pop()
+            if len(stack) > 0:
+                last_t = stack.pop()
+            else:
+                break
         print('reduce by grammar', act[1:], ':', rule.lhs,'->', ' '.join(rule.rhs))
 
     elif act == 'a':
@@ -423,7 +451,7 @@ if __name__ == "__main__":
     g.init_rules()
     print('Scanned Tokens:')
     tokens = sc.run(sys.argv[1])
-    #tokens = sc.run('test1.c1')
+    #tokens = sc.run('test5.c1')
     for t in tokens:
         print(t, end=' ')
     print('\n')
