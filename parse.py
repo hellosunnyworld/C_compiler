@@ -1,5 +1,6 @@
 import scanner as sc
-import copy, sys
+import copy, sys, pickle
+import mips_gen as mg
 
 def cmp_ls(ls1, ls2):
     if len(ls1) != len(ls2):
@@ -65,14 +66,14 @@ class cfg:
 
     def init_rules(self):
         # S -> PEOF
-        self.init_rule('S',['P','EOF'])
+        self.init_rule('Start',['program','EOF'])
 
         # P -> VDS STS (EOF)
         # program -> var_declaration statements
-        self.init_rule('P',['var_declarations','statements'])      
-        self.rule_dict['P'][-1].lookahead.append("EOF")
+        self.init_rule('program',['var_declarations','statements'])      
+        self.rule_dict['program'][-1].lookahead.append("EOF")
 
-        #self.init_rule('P',['statements'])      
+        #self.init_rule('program',['statements'])      
 
         # VDS -> VDS VD 
         # VDS -> VD
@@ -239,8 +240,8 @@ class cfg:
                                          "MINUS", 'LT', 'GT', 'EQ', 
                                          'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
 
-        self.first('S', self.rule_dict['S'][0].first)
-        self.first('P', self.rule_dict['P'][0].first)
+        self.first('Start', self.rule_dict['Start'][0].first)
+        self.first('program', self.rule_dict['program'][0].first)
         self.first('var_declarations', self.rule_dict['var_declarations'][0].first)
         self.first('var_declaration', self.rule_dict['var_declaration'][0].first)
         self.first('declaration_list', self.rule_dict['declaration_list'][0].first)
@@ -263,7 +264,7 @@ class cfg:
         for i in self.rule_dict.values():
             for item in i:
                 for ri in range(len(item.rhs) - 1):
-                    if item.rhs[ri] != 'P' and item.rhs[ri] != 'exp' and item.rhs[ri] != 'S' and self.rule_dict.get(item.rhs[ri]) != None:
+                    if item.rhs[ri] != 'program' and item.rhs[ri] != 'exp' and item.rhs[ri] != 'Start' and self.rule_dict.get(item.rhs[ri]) != None:
                         if self.rule_dict.get(item.rhs[ri + 1]) != None:
                             for i in self.rule_dict[item.rhs[ri + 1]][0].first:
                                 if i not in self.rule_dict[item.rhs[ri]][0].lookahead:
@@ -277,10 +278,6 @@ class cfg:
                     for c in self.rule_dict[item.lhs][0].lookahead:
                         if c not in self.rule_dict[item.rhs[-1]][0].lookahead:
                             self.rule_dict[item.rhs[-1]][0].lookahead.append(c)
-
-    def print_first(self):
-        for r in self.rule_dict.keys():
-            print(r, self.rule_dict[r][0].lookahead)
 
 class LR1:
     def __init__(self, cfg):
@@ -330,7 +327,14 @@ class LR1:
         # ! "accept" case
     
     def construct_map(self):
-        init_state = self.cfg.rule_dict['S']
+        try:
+            with open("table", "rb") as fp:   # Unpickling
+                self.table = pickle.load(fp)
+            return
+        except:
+            pass
+
+        init_state = self.cfg.rule_dict['Start']
         self.states.append(self.closure(init_state))
         self.mapE.append({})
         self.table.append({})
@@ -386,10 +390,12 @@ class LR1:
                         else:
                             self.table[si][X] = 'g' + str(state_j)
             count+= 1
-        final_s = int(self.table[0]['P'][1:])
+        final_s = int(self.table[0]['program'][1:])
         self.table[final_s]['EOF'] = 'a'
+        with open("table", "wb") as fp:   #Pickling
+            pickle.dump(self.table, fp)
 
-def parse(t, stack, crt_s):
+def parse(t, stack, reg_stack, crt_s, w):
     print('state:',crt_s, end='	')
     print('next type:', t, end='		')
 
@@ -399,21 +405,34 @@ def parse(t, stack, crt_s):
         while (p.table[crt_s].get(t) == None):
             act = p.table[crt_s]['sigma']
             stack.append([crt_s,t])
+            reg_stack.append(w)
             crt_s = int(act[1:])
         act = p.table[crt_s][t]
     if act[0] == 's':
         stack.append([crt_s,t])
+        reg_stack.append(w)
         crt_s = int(act[1:])
         print('shift to state', crt_s)
 
     elif act[0] == 'r':
         rule = g.rules[int(act[1:])]
+        arg_txt = ''
         for i in rule.rhs:
             if len(stack) > 0:
                 last_t = stack.pop()
+                last_w = reg_stack.pop()
+                if last_t[1] not in reserved and last_w not in reserved:
+                    if type(last_w) == str:
+                        arg_txt = '\"' + last_w + '\",' + arg_txt
+                    else:
+                        arg_txt = str(last_w) +',' + arg_txt
             else:
                 break
         print('reduce by grammar', act[1:], ':', rule.lhs,'->', ' '.join(rule.rhs))
+        arg_txt = arg_txt[:-1]
+        cmd = 'code_gen.' + act + '(' + arg_txt + ')'
+        print(cmd)
+        X_reg = eval(cmd)
 
     elif act == 'a':
         print('Accept!')
@@ -423,6 +442,10 @@ def parse(t, stack, crt_s):
     for c in stack:
         print(c[1], end=' ')
     print('|', end=' ')
+    print()
+    for r in reg_stack:
+        print(r, end=' ')
+    print('|', end=' ')
 
     if act[0] == 'r':
         print(rule.lhs)
@@ -431,36 +454,61 @@ def parse(t, stack, crt_s):
         print('next type:', rule.lhs, end='		')
 
         stack.append([last_t[0], rule.lhs])
+        reg_stack.append(X_reg)
         crt_s = int(p.table[last_t[0]][rule.lhs][1:])
         print('shift to state', crt_s)
 
         print('current situation:', end=' ')
         for c in stack:
             print(c[1], end=' ')
+        print('|')
+        for r in reg_stack:
+            print(r, end=' ')
         print('|\n')
 
         # Now deal with t
-        crt_s = parse(t, stack, crt_s)
-    else:
+        crt_s = parse(t, stack, reg_stack, crt_s, w)
+    #else:
         print('\n')  
     return crt_s                     
 
 
 if __name__ == "__main__":
+    # reserved = ['INT', 'MAIN', 'VOID', 'BREAK', 'DO', 'ELSE', 'IF', 'WHILE', 'RETURN', 'READ', 'WRITE',
+    #                 'LBRACE', 'RBRACE', 'LSQUARE', 'RSQUARE', 'LPAR', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+    #                 "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 'ASSIGN', 'COMMA', 'sigma', None, 'program'
+    #                 'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR', 'var_declarations', 'statements',
+    #                 'var_declaration', 'declaration_list', 'declaration', 'code_block', 'statement', 'statements',
+    #                 'assign_statement', 'control_statement', 'read_write_statement', 'if_statement', 'while_statement',
+    #                 "do_while_statement", 'read_write_statement', 'read_statement', 'write_statement', 'exp', 'if_stmt', 'Start', 'EOF']
+    reserved = ['INT', 'MAIN', 'VOID', 'BREAK', 'DO', 'ELSE', 'IF', 'WHILE', 'RETURN', 'READ', 'WRITE',
+                    'LBRACE', 'RBRACE', 'LSQUARE', 'RSQUARE', 'LPAR', 'RPAR', 'SEMI', 'OR_OP', "PLUS", 'AND_OP',
+                    "MINUS", "MUL_OP", "DIV_OP", 'LT', 'GT', 'EQ', 'ASSIGN', 'COMMA', 'sigma', None,
+                    'NOTEQ', "LTEQ", "GTEQ", 'SHL_OP', 'SHR_OP', 'ANDAND', 'OROR']
+
     g = cfg()
     g.init_rules()
     print('Scanned Tokens:')
-    tokens = sc.run(sys.argv[1])
-    #tokens = sc.run('test5.c1')
+    #tokens, words = sc.run(sys.argv[1])
+    tokens, words = sc.run('test0.c1')
     for t in tokens:
         print(t, end=' ')
     print('\n')
+    for w in words:
+        print(w, end=' ')
+    print('\n')
     tokens.append('EOF')
+    words.append('EOF')
+
 
     p = LR1(g)
     p.construct_map()
     crt_s = 0
     stack = []
+    reg_stack = []
+    code_gen = mg.generator()
+
     print('Parsing Process:')
-    for t in tokens:
-        crt_s = parse(t, stack, crt_s)
+    for i in range(len(tokens)):
+        crt_s = parse(tokens[i], stack, reg_stack, crt_s, words[i])
+    code_gen.print_codes()
