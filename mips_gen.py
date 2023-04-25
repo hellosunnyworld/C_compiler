@@ -16,6 +16,9 @@ class generator:
                 self.crt_bridge_pt = 0
                 self.crt_mem_pt = 2
 
+                self.b_num = 1
+                self.b_stack = []
+
         def update_ptr(self, pt, ls):
                 ls[pt] = 0
                 for i in range(pt + 1, len(ls)):
@@ -77,23 +80,42 @@ class generator:
         def r7(self, c, num):
                 # decla: id = num
                 self.codes.append('li $s' + str(self.crt_saved_pt) + ',' + str(num))
-                self.codes.append('sw $s' + str(self.crt_saved_pt) + ',' + self.r34(c))
+                self.codes.append('sw $s' + str(self.crt_saved_pt) + ',' + self.r36(c))
+        def r8(self, id, i):
+                # declaration -> ID LSQUARE INT_NUM RSQUARE
+                addr = self.r36(id)
+                addr = int(addr[:-5])
+                for a in range(addr, addr + int(i) * 4, 4):
+                        self.update_ptr(int(a/4), self.mem_aval)
 
         def r9(self, c):
-                self.r34(c)
+                # decla -> ID
+                self.r36(c)
+        def r11(self):
+                return
         def r12(self):
                 return
         def r13(self):
                 return
-        
         def r14(self):
+                return
+        def r15(self):
                 return
         def r16(self):
                 return
+        def r18(self):
+                # ctrl_stat -> if_stat
+                return
+        def r19(self):
+                return
+        def r21(self):
+                return
+        def r22(self):
+                return
         def r23(self):
                 return
-        def r25(self, c, exp):
-                # ass_stat: id = exp
+        
+        def reg_of_exp(self, exp):
                 if type(exp) == int:
                         reg = '$s' + str(self.crt_saved_pt)
                         self.codes.append('li ' + reg + ',' + str(exp))
@@ -101,11 +123,53 @@ class generator:
                         reg = self.load_from_mem(exp)
                 else:
                         reg = exp
+                return reg
+                        
+        def r24(self, id, i, exp):
+                # ass_stat: id[i] = exp
+                reg = self.reg_of_exp(exp)
 
-                self.codes.append('sw ' + reg + ',' + str(self.sym_table[c]) + '($sp)')
+                self.codes.append('sw ' + reg + ',' + self.r37(id, i))
                 self.release_storage(reg)
 
-        def r32(self, exp):
+        def r25(self, c, exp):
+                # ass_stat: id = exp
+                self.r24(c, 0, exp)
+
+        def r26(self):
+                # if_stat: if_stmt
+                self.codes.append('$L' + self.b_stack.pop() + ':')
+
+        def r27(self):
+                # else_head: if_stmt ELSE
+                self.codes.append('b $L' + str(self.b_num + 1))
+                self.codes.append('$L' + self.b_stack.pop() + ':')
+                self.b_num += 1
+                self.b_stack.append(str(self.b_num))
+
+        def r28(self):
+                # if_stat -> else_head code_block
+                self.codes.append('$L' + self.b_stack.pop() + ':')
+
+        def r29(self, exp):
+                # if_head -> IF LPAR exp RPAR
+                reg = self.reg_of_exp(exp)
+                self.b_num += 1
+                self.codes.append('beq ' + reg + ', $zero, $L' + str(self.b_num))
+                self.b_stack.append(str(self.b_num))
+
+        def r30(self):
+                # if_stmt -> if_head code_block
+                return
+        
+        def r33(self, c):
+                # read_statement -> READ LPAR ID RPAR
+                self.codes.append('addi $v0, $zero, 5')
+                self.codes.append('syscall')
+                self.codes.append('add $s' + str(self.crt_saved_pt) + ', $v0, $zero')
+                self.codes.append('sw $s' + str(self.crt_saved_pt) + ',' + str(self.sym_table[c]) + '($sp)')
+
+        def r34(self, exp):
                 # print(exp)
                 self.codes.append('addi $v0, $zero, 1')
                 if type(exp) == int:
@@ -116,12 +180,12 @@ class generator:
                         self.codes.append('add $a0, $zero, ' + exp)
                 self.codes.append('syscall')
 
-        def r33(self, c):
+        def r35(self, c):
                 # exp: INT_NUM
                 # c is the one popped from stack
                 return int(c)
 
-        def r34(self, c):
+        def r36(self, c):
                 # exp: id
                 try:
                         return str(self.sym_table[c]) + '($sp)'
@@ -131,11 +195,11 @@ class generator:
                         self.update_ptr(self.crt_mem_pt, self.mem_aval)
                         return str(addr) + '($sp)'
 
-        def r35(self, id, i):
+        def r37(self, id, i):
                 # exp: id[i]
                 return str(self.sym_table[id] + int(i) * 4) + '($sp)'
         
-        def r36(self, c):
+        def r38(self, c):
                 # exp: !c
                 if type(c) == int:
                         if c != 0:
@@ -155,17 +219,16 @@ class generator:
                 if type(c2) == str and c2[-5:] == '($sp)':
                         c2 = self.load_from_mem(c2)
 
-                if type(c1) == int and type(c2) == int:
+                if type(c1) == int:
                         rd = "$t" + str(self.crt_temp_pt)
                         self.update_ptr(self.crt_temp_pt, self.temp_reg_aval)
-                        self.codes.append("li " + rd + ',' + str(c1))    
-
-                        self.codes.append(op + "i " + rd + ',' + rd + ',' + str(c2))   
-                elif type(c1) == int:
-                        self.codes.append(op + "i " + c2 + ',' + c2 + ',' + str(c1)) 
-                        rd = c2
-                elif type(c2) == int:
-                        self.codes.append(op + "i " + c1 + ',' + c1 + ',' + str(c2))
+                        self.codes.append("li " + rd + ',' + str(c1))   
+                        c1 = rd 
+                if type(c2) == int:
+                        if op != 'sra' and op != 'sll':
+                                self.codes.append(op + "i " + c1 + ',' + c1 + ',' + str(c2))
+                        else:
+                                self.codes.append(op + " " + c1 + ',' + c1 + ',' + str(c2))
                         rd = c1
                 else:
                         rd = [c1, c2][c1[2:] > c2[2:]]
@@ -173,18 +236,35 @@ class generator:
                         self.release_storage([c1, c2][rd == c1])
                 return rd
 
-        def r37(self, c1, c2):
+        def r39(self, c1, c2):
                 return self.EopE(c1, c2, 'and')
 
-        def r38(self, c1, c2):
+        def r40(self, c1, c2):
                 return self.EopE(c1, c2, 'or')
 
-        def r39(self, c1, c2):
+        def r41(self, c1, c2):
                 return self.EopE(c1, c2, 'add')
         
-        def r40(self, c1, c2):
+        def r42(self, c1, c2):
                 return self.EopE(c1, c2, 'sub')
+        
+        def r45(self, c1, c2):
+                # <
+                result = self.EopE(c1, c2, 'slt')
+                self.codes.append('andi ' + result + ',' + result + ',0x00ff')
+                return result
+        
+        def r46(self, c1, c2):
+                # >
+                return self.r45(c2, c1)
 
+        def r51(self, c1, c2):
+                # <<
+                return self.EopE(c1, c2, 'sll')
+        def r52(self, c1, c2):
+                # >>
+                return self.EopE(c1, c2, 'sra')
+        
         def print_codes(self):
                 for cc in self.codes:
                         print(cc)

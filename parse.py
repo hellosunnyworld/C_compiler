@@ -124,10 +124,12 @@ class cfg:
 
         # if_stat -> if_stmt | if_stmt ELSE code_block
         self.init_rule('if_statement', ['if_stmt']) 
-        self.init_rule('if_statement', ['if_stmt', 'ELSE', 'code_block'])
+        self.init_rule('else_head', ['if_stmt', 'ELSE'])
+        self.init_rule('if_statement', ['else_head', 'code_block'])
 
         # if_stmt -> if (exp) code_block
-        self.init_rule('if_stmt', ['IF', 'LPAR', 'exp', 'RPAR', 'code_block'])
+        self.init_rule('if_head', ['IF', 'LPAR', 'exp', 'RPAR'])
+        self.init_rule('if_stmt', ['if_head', 'code_block'])
 
         # while_stat -> WHILE (exp) code_block
         self.init_rule('while_statement', ['WHILE', 'LPAR', 'exp', 'RPAR', 'code_block'])
@@ -253,7 +255,9 @@ class cfg:
         self.first('read_write_statement', self.rule_dict['read_write_statement'][0].first)
         self.first('assign_statement', self.rule_dict['assign_statement'][0].first)
         self.first('if_statement', self.rule_dict['if_statement'][0].first)
+        self.first('else_head', self.rule_dict['else_head'][0].first)
         self.first('if_stmt', self.rule_dict['if_stmt'][0].first)
+        self.first('if_head', self.rule_dict['if_head'][0].first)
         self.first('while_statement', self.rule_dict['while_statement'][0].first)
         self.first('do_while_statement', self.rule_dict['do_while_statement'][0].first)
         self.first('read_statement', self.rule_dict['read_statement'][0].first)
@@ -489,8 +493,8 @@ if __name__ == "__main__":
     g = cfg()
     g.init_rules()
     print('Scanned Tokens:')
-    #tokens, words = sc.run(sys.argv[1])
-    tokens, words = sc.run('test0.c1')
+    tokens, words = sc.run(sys.argv[1])
+    #tokens, words = sc.run('test0.c1')
     for t in tokens:
         print(t, end=' ')
     print('\n')
