@@ -132,10 +132,12 @@ class cfg:
         self.init_rule('if_stmt', ['if_head', 'code_block'])
 
         # while_stat -> WHILE (exp) code_block
-        self.init_rule('while_statement', ['WHILE', 'LPAR', 'exp', 'RPAR', 'code_block'])
+        self.init_rule('while_head', ['WHILE', 'LPAR', 'exp', 'RPAR'])
+        self.init_rule('while_statement', ['while_head', 'code_block'])
 
         # do_while_stat -> DO code_block WHILE (exp)
-        self.init_rule('do_while_statement', ['DO', 'code_block', 'WHILE', 'LPAR', 'exp', 'RPAR']) 
+        self.init_rule('do_head', ['DO'])
+        self.init_rule('do_while_statement', ['do_head', 'code_block', 'while_head']) 
 
         # r_stat -> READ(ID)
         self.init_rule('read_statement', ['READ', 'LPAR', 'ID', 'RPAR'])
@@ -259,7 +261,9 @@ class cfg:
         self.first('if_stmt', self.rule_dict['if_stmt'][0].first)
         self.first('if_head', self.rule_dict['if_head'][0].first)
         self.first('while_statement', self.rule_dict['while_statement'][0].first)
+        self.first('while_head', self.rule_dict['while_head'][0].first)
         self.first('do_while_statement', self.rule_dict['do_while_statement'][0].first)
+        self.first('do_head', self.rule_dict['do_head'][0].first)
         self.first('read_statement', self.rule_dict['read_statement'][0].first)
         self.first('write_statement', self.rule_dict['write_statement'][0].first)
         self.first('exp', self.rule_dict['exp'][0].first)
@@ -417,6 +421,8 @@ def parse(t, stack, reg_stack, crt_s, w):
         reg_stack.append(w)
         crt_s = int(act[1:])
         print('shift to state', crt_s)
+        if t == 'WHILE':
+            code_gen.while_htag1.append(len(code_gen.codes))
 
     elif act[0] == 'r':
         rule = g.rules[int(act[1:])]
@@ -435,7 +441,7 @@ def parse(t, stack, reg_stack, crt_s, w):
         print('reduce by grammar', act[1:], ':', rule.lhs,'->', ' '.join(rule.rhs))
         arg_txt = arg_txt[:-1]
         cmd = 'code_gen.' + act + '(' + arg_txt + ')'
-        print(cmd)
+        #print(cmd)
         X_reg = eval(cmd)
 
     elif act == 'a':
@@ -446,10 +452,10 @@ def parse(t, stack, reg_stack, crt_s, w):
     for c in stack:
         print(c[1], end=' ')
     print('|', end=' ')
-    print()
-    for r in reg_stack:
-        print(r, end=' ')
-    print('|', end=' ')
+    # print()
+    # for r in reg_stack:
+    #     print(r, end=' ')
+    # print('|', end=' ')
 
     if act[0] == 'r':
         print(rule.lhs)
@@ -465,14 +471,14 @@ def parse(t, stack, reg_stack, crt_s, w):
         print('current situation:', end=' ')
         for c in stack:
             print(c[1], end=' ')
-        print('|')
-        for r in reg_stack:
-            print(r, end=' ')
+        # print('|')
+        # for r in reg_stack:
+        #     print(r, end=' ')
         print('|\n')
 
         # Now deal with t
         crt_s = parse(t, stack, reg_stack, crt_s, w)
-    #else:
+    else:
         print('\n')  
     return crt_s                     
 
@@ -515,4 +521,7 @@ if __name__ == "__main__":
     print('Parsing Process:')
     for i in range(len(tokens)):
         crt_s = parse(tokens[i], stack, reg_stack, crt_s, words[i])
+
+    code_gen.codes.append('end:')
+    code_gen.codes.append('nop')
     code_gen.print_codes()
